@@ -1,0 +1,19 @@
+--- a/Makefile
++++ b/Makefile
+@@ -57,13 +57,9 @@
+ MQTT_EMBED_LIB_C = paho-embed-mqtt3c
+ 
+ 
+-# determine current platform
+-ifeq ($(OS),Windows_NT)
+-	OSTYPE = $(OS)
+-else
+-	OSTYPE = $(shell uname -s)
+-	MACHINETYPE = $(shell uname -m)
+-endif
++
++OSTYPE = Linux
++
+ 
+ ifeq ($(OSTYPE),Linux)
+ 

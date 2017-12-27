@@ -1,0 +1,110 @@
+--- a/mp_pkt_fwd/src/ttn_transport.c
++++ b/mp_pkt_fwd/src/ttn_transport.c
+@@ -84,6 +84,40 @@
+ 
+ extern Server servers[];
+ 
++/* uclibc and dietlibc do not have this junk -ReneR */
++#if defined (__UCLIBC__) || defined (__dietlibc__)
++static int getloadavg (double loadavg[], int nelem)
++{
++  int fd;
++  fd = open ("/proc/loadavg", O_RDONLY);
++  if (fd < 0)
++    return -1;
++  else
++    {
++      char buf[65], *p;
++      ssize_t nread;
++      int i;
++      nread = read (fd, buf, sizeof buf - 1);
++      close (fd);
++      if (nread <= 0)
++	     return -1;
++      buf[nread - 1] = '\0';
++      if (nelem > 3)
++	     nelem = 3;
++      p = buf;
++      for (i = 0; i < nelem; ++i)
++	    {
++	       char *endp;
++	       loadavg[i] = strtod (p, &endp);
++	        if (endp == p)
++	         return -1;
++	       p = endp;
++	    }
++      return i;
++    }
++}
++#endif
++
+ void ttn_init(int idx) {
+     // Create upstream thread and connect
+     int i = pthread_create( &servers[idx].t_up, NULL, (void * (*)(void *))ttn_upstream, (void *) (long) idx);
+@@ -107,7 +141,7 @@
+     struct timeval current_unix_time;
+     struct timeval current_concentrator_time;
+     char json[100], iso_timestamp[24];
+-    time_t system_time; 
++    time_t system_time;
+     int i,j,buff_index;
+     short x0, x1;
+ 
+@@ -182,10 +216,10 @@
+ 			else {
+ 			    MSG("WARNING: [down] format error in \"coding_rate\" (%s), TX aborted\n",lora->coding_rate);
+ 			    return;
+-			} 
++			}
+ 			txpkt.invert_pol = gtw->polarization_inversion;
+ 			txpkt.preamble = (uint16_t)STD_LORA_PREAMB;
+-			j = snprintf((json + buff_index), 100-buff_index, 
++			j = snprintf((json + buff_index), 100-buff_index,
+ 			    ",\"modulation\":\"LORA\",\"data_rate\":\"%s\",\"coding_rate\":\"%s\"",
+ 			    lora->data_rate,lora->coding_rate);
+ 			if (j > 0) {
+@@ -211,7 +245,7 @@
+ 
+ 		    txpkt.size = msg->payload.len;
+ 		    memcpy(txpkt.payload, msg->payload.data, txpkt.size < sizeof txpkt.payload ? txpkt.size : sizeof txpkt.payload);
+-		    j = snprintf((json + buff_index), 100-buff_index, 
++		    j = snprintf((json + buff_index), 100-buff_index,
+ 			",\"length\":%d", txpkt.size);
+ 		    if (j > 0) {
+ 			buff_index += j;
+@@ -272,7 +306,7 @@
+ 			increment_down(TX_REQUESTED);
+ 		    }
+ 
+-		    j = snprintf((json + buff_index), 100-buff_index, 
++		    j = snprintf((json + buff_index), 100-buff_index,
+ 			",\"jit_result\":%d}", jit_result);
+ 		    if (j > 0) {
+ 			buff_index += j;
+@@ -295,7 +329,7 @@
+ }
+ 
+ void ttn_data_up(int idx, int nb_pkt, struct lgw_pkt_rx_s *rxpkt) {
+-    Queue *entry; 
++    Queue *entry;
+     Queue *last;
+ 
+     // Don't queue data for disconnected servers
+@@ -336,7 +370,7 @@
+ 	    sleep(waittime);
+ 	    if (waittime < 300) waittime = 2 * waittime;
+ 	}
+-	ttngwc_init(&servers[idx].ttn, servers[idx].gw_id, 
++	ttngwc_init(&servers[idx].ttn, servers[idx].gw_id,
+ 		    servers[idx].downstream == true ? &ttn_downlink : &ttn_dummy_downlink, NULL);
+ 	if (!servers[idx].ttn) {
+ 	    MSG("ERROR: [TTN] Initialize server \"%s\" failed, retry in %d seconds\n",servers[idx].addr,waittime);
+@@ -352,7 +386,7 @@
+ 	    servers[idx].live = false;
+ 	    continue;
+ 	}
+-	break; 
++	break;
+     }
+     if (!exit_sig && !quit_sig) {
+ 	MSG("INFO: [TTN] server \"%s\" connected\n",servers[idx].addr);
